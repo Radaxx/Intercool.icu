@@ -47,24 +47,46 @@ Ouvre [http://localhost:3000](http://localhost:3000).
 - `app/page.tsx` récupère les séances des 90 derniers jours côté serveur.
 - Le dashboard permet de filtrer par sport et par période, avec des cartes
   animées affichant distance, durée, dénivelé, FC moyenne, allure/vitesse.
-- Cliquer sur une séance ouvre un aperçu de l'image de partage, générée par
-  `app/api/share/[id]/route.tsx` (format post 1:1 ou story 9:16),
-  téléchargeable en PNG.
+- Cliquer sur une séance ouvre une modale de partage : titre et description
+  éditables (régénèrent l'image après une courte pause de frappe), aperçu au
+  format post 1:1 ou story 9:16 généré par `app/api/share/[id]/route.tsx`,
+  téléchargeable en PNG ou partageable directement via le menu système du
+  téléphone (Web Share API — voir plus bas).
 - Pour les séances avec GPS, le tracé s'affiche en discret sur la carte
   (chargé à la demande via `app/api/activities/[id]/gps`, dès qu'elle entre
-  dans le viewport) et en filigrane sur l'image de partage. Les séances sans
-  GPS (home trainer, natation en bassin, renfo...) n'affichent simplement
-  rien à cet endroit.
+  dans le viewport) et dans un panneau dédié (ligne blanche avec effet glow +
+  marqueurs départ/arrivée) sur l'image de partage. Les séances sans GPS
+  (home trainer sans position, natation en bassin, renfo...) n'affichent
+  simplement rien à cet endroit. Certaines activités virtuelles (Zwift...)
+  ont un vrai tracé (la position dans le monde du jeu) et l'affichent aussi ;
+  d'autres apps de home trainer ne renseignent pas ce flux, d'où des
+  différences d'une sortie virtuelle à l'autre — ce n'est pas un bug.
 
 ### Note sur le tracé GPS
 
-Le tracé est reconstruit à partir de l'endpoint `GET /api/v1/activity/{id}/streams?types=latlng`
-d'intervals.icu (projection équirectangulaire simple, pas de fond de carte).
-Le parsing dans `lib/intervals.ts` (`getActivityGps`) accepte plusieurs formes
-de réponse possibles par prudence — si ton compte renvoie un format différent,
-l'itinéraire n'apparaîtra simplement pas (aucune erreur bloquante) : ouvre une
-issue ou dis-le moi avec un exemple de réponse brute de cet endpoint pour
-ajuster le parsing.
+Le flux `GET /api/v1/activity/{id}/streams?types=latlng` d'intervals.icu ne
+renvoie pas des paires `[lat,lng]` imbriquées : le flux `latlng` porte deux
+séries parallèles, `data` (latitude) et `data2` (longitude), zippées dans
+`getActivityGps` (`lib/intervals.ts`). Le tracé est ensuite projeté
+(équirectangulaire simple, pas de fond de carte) par `routePathFromLatLng`
+(`lib/geo.ts`).
+
+## Partage direct vers Instagram (Web Share API)
+
+Sur mobile (Safari iOS 15+, Chrome Android), un bouton **Partager**
+apparaît à côté du téléchargement : il ouvre le menu de partage natif du
+téléphone via `navigator.share({ files: [...] })`, dans lequel Instagram
+propose de poster l'image en story ou en feed. Aucune clé API, aucun compte
+Meta developer requis. Sur desktop (pas d'appli Instagram), seul le bouton
+de téléchargement s'affiche.
+
+On a délibérément écarté l'intégration directe de l'API Graph
+d'Instagram (Content Publishing) : elle demanderait de convertir le compte
+en compte Business/Creator, de le lier à une Page Facebook, de créer une
+app Meta developer et de faire valider par Meta la permission
+`instagram_content_publish` (App Review, plusieurs semaines, politique de
+confidentialité + CGU publiques requises) — disproportionné pour un outil
+personnel à un seul utilisateur, sans garantie d'approbation.
 
 ## Confidentialité
 

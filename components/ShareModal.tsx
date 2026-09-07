@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Download, Loader2, Square, RectangleVertical, X } from "lucide-react";
+import {
+  Download,
+  Loader2,
+  Share2,
+  Square,
+  RectangleVertical,
+  X,
+} from "lucide-react";
 import type { Activity } from "@/lib/types";
 import { getSportMeta } from "@/lib/sports";
 
@@ -23,8 +30,26 @@ export default function ShareModal({
   const [description, setDescription] = useState("");
   const [draft, setDraft] = useState({ title: activity.name || "", description: "" });
   const [downloading, setDownloading] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [canShareFiles, setCanShareFiles] = useState(false);
   const sport = getSportMeta(activity.type);
+
+  // Détection de support du Web Share API avec fichiers (Safari iOS 15+,
+  // Chrome Android...) : absent sur desktop, où il n'y a de toute façon pas
+  // d'appli Instagram à proposer dans le menu de partage.
+  useEffect(() => {
+    try {
+      const testFile = new File([], "test.png", { type: "image/png" });
+      setCanShareFiles(
+        typeof navigator !== "undefined" &&
+          typeof navigator.canShare === "function" &&
+          navigator.canShare({ files: [testFile] })
+      );
+    } catch {
+      setCanShareFiles(false);
+    }
+  }, []);
 
   // On ne régénère l'image qu'une fois l'utilisateur arrêté de taper, pour
   // éviter un appel à l'API (et à intervals.icu) à chaque frappe.
@@ -41,6 +66,10 @@ export default function ShareModal({
   if (title.trim()) params.set("title", title.trim());
   if (description.trim()) params.set("description", description.trim());
   const src = `/api/share/${activity.id}?${params.toString()}`;
+  const fileName = `${title || activity.name || "seance"}-${format}.png`.replace(
+    /\s+/g,
+    "-"
+  );
 
   async function handleDownload() {
     setDownloading(true);
@@ -50,16 +79,34 @@ export default function ShareModal({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${title || activity.name || "seance"}-${format}.png`.replace(
-        /\s+/g,
-        "-"
-      );
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
     } finally {
       setDownloading(false);
+    }
+  }
+
+  async function handleShare() {
+    setSharing(true);
+    try {
+      const res = await fetch(src);
+      const blob = await res.blob();
+      const file = new File([blob], fileName, { type: "image/png" });
+      await navigator.share({
+        files: [file],
+        title: title || activity.name || sport.label,
+        text: description || undefined,
+      });
+    } catch (e) {
+      // AbortError : l'utilisateur a fermé le menu de partage, rien à faire.
+      if (e instanceof Error && e.name !== "AbortError") {
+        console.error(e);
+      }
+    } finally {
+      setSharing(false);
     }
   }
 
@@ -176,18 +223,47 @@ export default function ShareModal({
             </button>
           </div>
 
-          <button
-            onClick={handleDownload}
-            disabled={downloading}
-            className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:opacity-90 disabled:opacity-60"
-          >
-            {downloading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-            Télécharger l&apos;image
-          </button>
+          {canShareFiles ? (
+            <div className="flex gap-2">
+              <button
+                onClick={handleShare}
+                disabled={sharing}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:opacity-90 disabled:opacity-60"
+              >
+                {sharing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Share2 className="h-4 w-4" />
+                )}
+                Partager
+              </button>
+              <button
+                onClick={handleDownload}
+                disabled={downloading}
+                className="flex items-center justify-center gap-2 rounded-xl bg-white/10 px-4 py-3 text-sm font-medium text-neutral-200 transition hover:bg-white/15 disabled:opacity-60"
+                aria-label="Télécharger l'image"
+              >
+                {downloading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleDownload}
+              disabled={downloading}
+              className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:opacity-90 disabled:opacity-60"
+            >
+              {downloading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              Télécharger l&apos;image
+            </button>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>
