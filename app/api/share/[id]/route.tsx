@@ -10,6 +10,7 @@ import {
   formatPace,
   formatDateLong,
   isCyclingType,
+  isVirtualType,
 } from "@/lib/format";
 import { loadGoogleFont } from "@/lib/og-font";
 
@@ -58,7 +59,7 @@ export async function GET(
   const contentWidth = dim.width - dim.pad * 2;
   const routePanelHeight = format === "story" ? 460 : 300;
   const routePanelPad = 24;
-  const route = gpsPoints
+  const route = gpsPoints && !isVirtualType(activity.type)
     ? routePathFromLatLng(
         gpsPoints,
         contentWidth - routePanelPad * 2,
@@ -70,7 +71,10 @@ export async function GET(
 
   const sport = getSportMeta(activity.type);
   const hero = heroStat(activity);
-  const title = (activity.name || sport.label).slice(0, 42);
+  const titleParam = req.nextUrl.searchParams.get("title")?.trim();
+  const descriptionParam = req.nextUrl.searchParams.get("description")?.trim();
+  const title = (titleParam || activity.name || sport.label).slice(0, 60);
+  const description = (descriptionParam || "").slice(0, 90);
   const dateLabel = formatDateLong(activity.start_date_local);
 
   type Stat = { label: string; value: string };
@@ -100,6 +104,7 @@ export async function GET(
     hero.value,
     hero.unit,
     hero.label,
+    description,
     ...visibleStats.flatMap((s) => [s.label, s.value]),
     "intercool.icu",
     "via intervals.icu",
@@ -316,6 +321,23 @@ export async function GET(
             {hero.label}
           </span>
         </div>
+
+        {description && (
+          <span
+            style={{
+              fontSize: format === "story" ? 30 : 26,
+              fontWeight: 400,
+              color: "rgba(255,255,255,0.85)",
+              lineHeight: 1.3,
+              display: "flex",
+              maxWidth: contentWidth,
+              zIndex: 1,
+              marginBottom: format === "story" ? 24 : 16,
+            }}
+          >
+            {description}
+          </span>
+        )}
 
         {visibleStats.length > 0 && (
           <div

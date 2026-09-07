@@ -47,6 +47,15 @@ export function isCyclingType(type: string): boolean {
   return /ride|bik|cycl|velomobile/i.test(type);
 }
 
+/**
+ * Activités "virtuelles" (Zwift, home trainer connecté...) : certaines
+ * remontent quand même un flux latlng, mais c'est la position dans le monde
+ * du jeu, pas un vrai itinéraire GPS — on ne veut jamais l'afficher.
+ */
+export function isVirtualType(type: string): boolean {
+  return /^virtual/i.test(type);
+}
+
 export function formatDateLong(iso: string): string {
   const d = new Date(iso);
   return new Intl.DateTimeFormat("fr-FR", {

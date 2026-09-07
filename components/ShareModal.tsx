@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Download, Loader2, Square, RectangleVertical, X } from "lucide-react";
 import type { Activity } from "@/lib/types";
 import { getSportMeta } from "@/lib/sports";
 
 type Format = "post" | "story";
+
+const TITLE_MAX = 60;
+const DESCRIPTION_MAX = 90;
 
 export default function ShareModal({
   activity,
@@ -16,11 +19,28 @@ export default function ShareModal({
   onClose: () => void;
 }) {
   const [format, setFormat] = useState<Format>("post");
+  const [title, setTitle] = useState(activity.name || "");
+  const [description, setDescription] = useState("");
+  const [draft, setDraft] = useState({ title: activity.name || "", description: "" });
   const [downloading, setDownloading] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const sport = getSportMeta(activity.type);
 
-  const src = `/api/share/${activity.id}?format=${format}`;
+  // On ne régénère l'image qu'une fois l'utilisateur arrêté de taper, pour
+  // éviter un appel à l'API (et à intervals.icu) à chaque frappe.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setTitle(draft.title);
+      setDescription(draft.description);
+      setImageLoaded(false);
+    }, 500);
+    return () => clearTimeout(t);
+  }, [draft]);
+
+  const params = new URLSearchParams({ format });
+  if (title.trim()) params.set("title", title.trim());
+  if (description.trim()) params.set("description", description.trim());
+  const src = `/api/share/${activity.id}?${params.toString()}`;
 
   async function handleDownload() {
     setDownloading(true);
@@ -30,7 +50,10 @@ export default function ShareModal({
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${activity.name || "seance"}-${format}.png`.replace(/\s+/g, "-");
+      a.download = `${title || activity.name || "seance"}-${format}.png`.replace(
+        /\s+/g,
+        "-"
+      );
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -55,7 +78,7 @@ export default function ShareModal({
           exit={{ opacity: 0, scale: 0.95, y: 12 }}
           transition={{ type: "spring", duration: 0.35, bounce: 0.2 }}
           onClick={(e) => e.stopPropagation()}
-          className="flex w-full max-w-md flex-col gap-4 rounded-3xl border border-white/10 bg-base-900 p-5 shadow-2xl"
+          className="flex max-h-[90vh] w-full max-w-md flex-col gap-4 overflow-y-auto rounded-3xl border border-white/10 bg-base-900 p-5 shadow-2xl"
         >
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-neutral-200">
@@ -68,6 +91,40 @@ export default function ShareModal({
             >
               <X className="h-4 w-4" />
             </button>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-neutral-400">Titre</span>
+              <input
+                type="text"
+                value={draft.title}
+                maxLength={TITLE_MAX}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, title: e.target.value }))
+                }
+                placeholder={sport.label}
+                className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-neutral-100 outline-none focus:border-indigo-400/60"
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-neutral-400">
+                Description{" "}
+                <span className="text-neutral-600">
+                  ({draft.description.length}/{DESCRIPTION_MAX})
+                </span>
+              </span>
+              <textarea
+                value={draft.description}
+                maxLength={DESCRIPTION_MAX}
+                onChange={(e) =>
+                  setDraft((d) => ({ ...d, description: e.target.value }))
+                }
+                placeholder="Ajoute une légende..."
+                rows={2}
+                className="resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-neutral-100 outline-none focus:border-indigo-400/60"
+              />
+            </label>
           </div>
 
           <div

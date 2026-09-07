@@ -56,7 +56,7 @@ export default function ActivityCard({
           </p>
         </div>
 
-        <RouteThumbnail activityId={activity.id} />
+        <RouteThumbnail activityId={activity.id} activityType={activity.type} />
 
         <div className="grid grid-cols-2 gap-2">
           <StatPill icon={Clock} label="Durée" value={formatDuration(activity.moving_time)} />
