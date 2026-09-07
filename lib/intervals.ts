@@ -175,13 +175,14 @@ export async function getActivityDebugInfo(id: string) {
         summary = json.map((s) => {
           const entry = s as Record<string, unknown>;
           const data = entry.data;
+          const data2 = entry.data2;
           return {
             type: entry.type,
-            otherKeys: Object.keys(entry).filter(
-              (k) => k !== "type" && k !== "data"
-            ),
+            name: entry.name,
             dataLength: Array.isArray(data) ? data.length : null,
             sample: Array.isArray(data) ? data.slice(0, 6) : data,
+            data2Length: Array.isArray(data2) ? data2.length : null,
+            data2Sample: Array.isArray(data2) ? data2.slice(0, 6) : data2,
           };
         });
       }
