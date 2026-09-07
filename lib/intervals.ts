@@ -129,6 +129,52 @@ export async function getActivityGps(id: string): Promise<RawLatLng[] | null> {
   }
 }
 
+/**
+ * Diagnostic temporaire : renvoie la réponse brute d'intervals.icu pour
+ * l'activité et pour l'endpoint streams, afin de comprendre pourquoi le
+ * tracé GPS ne remonte pas (mauvais endpoint, format inattendu, etc.).
+ */
+export async function getActivityDebugInfo(id: string) {
+  const result: Record<string, unknown> = {};
+
+  try {
+    const res = await fetch(`${BASE_URL}/activity/${id}`, {
+      headers: { Authorization: authHeader() },
+    });
+    const text = await res.text();
+    result.activity = {
+      status: res.status,
+      ok: res.ok,
+      bodyPreview: text.slice(0, 3000),
+    };
+    try {
+      result.activityKeys = Object.keys(JSON.parse(text));
+    } catch {
+      /* body non-JSON, ignoré */
+    }
+  } catch (e) {
+    result.activityError = e instanceof Error ? e.message : String(e);
+  }
+
+  try {
+    const res = await fetch(
+      `${BASE_URL}/activity/${id}/streams?types=latlng`,
+      { headers: { Authorization: authHeader() } }
+    );
+    const text = await res.text();
+    result.streams = {
+      status: res.status,
+      ok: res.ok,
+      bodyPreview: text.slice(0, 1500),
+      bodyLength: text.length,
+    };
+  } catch (e) {
+    result.streamsError = e instanceof Error ? e.message : String(e);
+  }
+
+  return result;
+}
+
 export async function getActivity(id: string): Promise<Activity> {
   const res = await fetch(`${BASE_URL}/activity/${id}`, {
     headers: { Authorization: authHeader() },
