@@ -10,7 +10,6 @@ import {
   formatPace,
   formatDateLong,
   isCyclingType,
-  isVirtualType,
 } from "@/lib/format";
 import { loadGoogleFont } from "@/lib/og-font";
 
@@ -59,7 +58,7 @@ export async function GET(
   const contentWidth = dim.width - dim.pad * 2;
   const routePanelHeight = format === "story" ? 460 : 300;
   const routePanelPad = 24;
-  const route = gpsPoints && !isVirtualType(activity.type)
+  const route = gpsPoints
     ? routePathFromLatLng(
         gpsPoints,
         contentWidth - routePanelPad * 2,

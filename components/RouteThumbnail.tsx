@@ -1,22 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { isVirtualType } from "@/lib/format";
 
-export default function RouteThumbnail({
-  activityId,
-  activityType,
-}: {
-  activityId: string;
-  activityType: string;
-}) {
+export default function RouteThumbnail({ activityId }: { activityId: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [path, setPath] = useState<string | null>(null);
   const [viewBox, setViewBox] = useState("0 0 400 200");
-  const isVirtual = isVirtualType(activityType);
 
   useEffect(() => {
-    if (isVirtual) return;
     const el = containerRef.current;
     if (!el) return;
 
@@ -39,9 +30,7 @@ export default function RouteThumbnail({
 
     observer.observe(el);
     return () => observer.disconnect();
-  }, [activityId, isVirtual]);
-
-  if (isVirtual) return null;
+  }, [activityId]);
 
   return (
     <div
