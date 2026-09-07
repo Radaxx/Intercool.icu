@@ -142,31 +142,59 @@ export async function getActivityDebugInfo(id: string) {
       headers: { Authorization: authHeader() },
     });
     const text = await res.text();
-    result.activity = {
-      status: res.status,
-      ok: res.ok,
-      bodyPreview: text.slice(0, 3000),
-    };
     try {
-      result.activityKeys = Object.keys(JSON.parse(text));
+      const json = JSON.parse(text);
+      result.activity = {
+        status: res.status,
+        ok: res.ok,
+        stream_types: json.stream_types,
+      };
     } catch {
-      /* body non-JSON, ignoré */
+      result.activity = {
+        status: res.status,
+        ok: res.ok,
+        bodyPreview: text.slice(0, 500),
+      };
     }
   } catch (e) {
     result.activityError = e instanceof Error ? e.message : String(e);
   }
 
   try {
-    const res = await fetch(
-      `${BASE_URL}/activity/${id}/streams?types=latlng`,
-      { headers: { Authorization: authHeader() } }
-    );
+    // Pas de filtre `types` ici : on veut voir TOUS les flux disponibles
+    // (leurs noms exacts) pour repérer où se cache la longitude.
+    const res = await fetch(`${BASE_URL}/activity/${id}/streams`, {
+      headers: { Authorization: authHeader() },
+    });
     const text = await res.text();
-    result.streams = {
+
+    let summary: unknown = undefined;
+    try {
+      const json = JSON.parse(text);
+      if (Array.isArray(json)) {
+        summary = json.map((s) => {
+          const entry = s as Record<string, unknown>;
+          const data = entry.data;
+          return {
+            type: entry.type,
+            otherKeys: Object.keys(entry).filter(
+              (k) => k !== "type" && k !== "data"
+            ),
+            dataLength: Array.isArray(data) ? data.length : null,
+            sample: Array.isArray(data) ? data.slice(0, 6) : data,
+          };
+        });
+      }
+    } catch {
+      /* body non-JSON, on retombe sur l'aperçu brut ci-dessous */
+    }
+
+    result.streamsAll = {
       status: res.status,
       ok: res.ok,
-      bodyPreview: text.slice(0, 1500),
       bodyLength: text.length,
+      summary,
+      rawPreview: summary === undefined ? text.slice(0, 1000) : undefined,
     };
   } catch (e) {
     result.streamsError = e instanceof Error ? e.message : String(e);
