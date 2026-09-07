@@ -55,10 +55,17 @@ export async function GET(
     return new Response(message, { status: 502 });
   }
 
-  const routeAreaWidth = dim.width - dim.pad * 2;
-  const routeAreaHeight = dim.height - dim.pad * 2;
-  const routePath = gpsPoints
-    ? routePathFromLatLng(gpsPoints, routeAreaWidth, routeAreaHeight, 0, 260)
+  const contentWidth = dim.width - dim.pad * 2;
+  const routePanelHeight = format === "story" ? 460 : 300;
+  const routePanelPad = 24;
+  const route = gpsPoints
+    ? routePathFromLatLng(
+        gpsPoints,
+        contentWidth - routePanelPad * 2,
+        routePanelHeight - routePanelPad * 2,
+        6,
+        260
+      )
     : null;
 
   const sport = getSportMeta(activity.type);
@@ -104,7 +111,7 @@ export async function GET(
     loadGoogleFont("Inter", 400, allText),
   ]);
 
-  const heroFontSize = format === "story" ? 220 : 180;
+  const heroFontSize = format === "story" ? 170 : 130;
   const titleFontSize = format === "story" ? 64 : 56;
 
   return new ImageResponse(
@@ -145,25 +152,6 @@ export async function GET(
             display: "flex",
           }}
         />
-
-        {routePath && (
-          <svg
-            width={routeAreaWidth}
-            height={routeAreaHeight}
-            viewBox={`0 0 ${routeAreaWidth} ${routeAreaHeight}`}
-            style={{ position: "absolute", top: dim.pad, left: dim.pad }}
-          >
-            <path
-              d={routePath}
-              fill="none"
-              stroke="white"
-              strokeOpacity={0.28}
-              strokeWidth={format === "story" ? 10 : 8}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        )}
 
         <div
           style={{
@@ -232,6 +220,61 @@ export async function GET(
           >
             {title}
           </span>
+
+          {route && (
+            <div
+              style={{
+                display: "flex",
+                width: contentWidth,
+                height: routePanelHeight,
+                padding: routePanelPad,
+                borderRadius: 32,
+                background: "rgba(255,255,255,0.10)",
+              }}
+            >
+              <svg
+                width={contentWidth - routePanelPad * 2}
+                height={routePanelHeight - routePanelPad * 2}
+                viewBox={`0 0 ${contentWidth - routePanelPad * 2} ${
+                  routePanelHeight - routePanelPad * 2
+                }`}
+              >
+                <path
+                  d={route.path}
+                  fill="none"
+                  stroke="white"
+                  strokeOpacity={0.35}
+                  strokeWidth={20}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d={route.path}
+                  fill="none"
+                  stroke="white"
+                  strokeWidth={7}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <circle
+                  cx={route.start.x}
+                  cy={route.start.y}
+                  r={11}
+                  fill="white"
+                  stroke={sport.gradientHex[0]}
+                  strokeWidth={5}
+                />
+                <circle
+                  cx={route.end.x}
+                  cy={route.end.y}
+                  r={11}
+                  fill={sport.gradientHex[1]}
+                  stroke="white"
+                  strokeWidth={5}
+                />
+              </svg>
+            </div>
+          )}
 
           <div style={{ display: "flex", alignItems: "flex-end", gap: 18 }}>
             <span

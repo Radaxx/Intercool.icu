@@ -16,9 +16,9 @@ export async function GET(
     if (!points) {
       return NextResponse.json({ path: null });
     }
-    const path = routePathFromLatLng(points, WIDTH, HEIGHT, 10);
+    const route = routePathFromLatLng(points, WIDTH, HEIGHT, 10);
     return NextResponse.json({
-      path,
+      path: route?.path ?? null,
       viewBox: `0 0 ${WIDTH} ${HEIGHT}`,
     });
   } catch {

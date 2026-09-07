@@ -53,6 +53,15 @@ function downsample<T>(arr: T[], maxPoints: number): T[] {
   return out;
 }
 
+export interface RoutePath {
+  /** Chemin SVG (`d`) du tracé complet. */
+  path: string;
+  /** Point de départ, dans le même repère que `path` (pour un marqueur). */
+  start: { x: number; y: number };
+  /** Point d'arrivée, dans le même repère que `path` (pour un marqueur). */
+  end: { x: number; y: number };
+}
+
 /**
  * Construit un chemin SVG (`d`) à partir d'une liste de points GPS bruts,
  * mis à l'échelle dans une boîte width x height avec padding.
@@ -64,7 +73,7 @@ export function routePathFromLatLng(
   height: number,
   padding: number,
   maxPoints = 220
-): string | null {
+): RoutePath | null {
   const valid = latlngs.filter(
     ([lat, lng]) =>
       Number.isFinite(lat) &&
@@ -79,7 +88,9 @@ export function routePathFromLatLng(
   const projected = project(sampled);
   const fitted = fitToBox(projected, width, height, padding);
 
-  return fitted
+  const path = fitted
     .map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
     .join(" ");
+
+  return { path, start: fitted[0], end: fitted[fitted.length - 1] };
 }
