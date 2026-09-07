@@ -53,6 +53,82 @@ export async function getActivities(days = 90, limit = 60): Promise<Activity[]> 
     .slice(0, limit);
 }
 
+type RawLatLng = [number, number];
+
+function normalizeLatLngEntries(raw: unknown): RawLatLng[] {
+  if (!Array.isArray(raw)) return [];
+  const out: RawLatLng[] = [];
+  for (const item of raw) {
+    if (
+      Array.isArray(item) &&
+      item.length === 2 &&
+      typeof item[0] === "number" &&
+      typeof item[1] === "number"
+    ) {
+      out.push([item[0], item[1]]);
+    } else if (item && typeof item === "object") {
+      const lat = (item as Record<string, unknown>).lat;
+      const lng =
+        (item as Record<string, unknown>).lng ??
+        (item as Record<string, unknown>).lon;
+      if (typeof lat === "number" && typeof lng === "number") {
+        out.push([lat, lng]);
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Récupère le tracé GPS (latitude/longitude) d'une activité via l'endpoint
+ * streams d'intervals.icu. Les séances sans GPS (home trainer, natation en
+ * bassin, renfo...) n'ont pas ce flux : on retourne alors null plutôt que de
+ * faire échouer l'appelant.
+ */
+export async function getActivityGps(id: string): Promise<RawLatLng[] | null> {
+  try {
+    const res = await fetch(
+      `${BASE_URL}/activity/${id}/streams?types=latlng`,
+      {
+        headers: { Authorization: authHeader() },
+        next: { revalidate: 3600 },
+      }
+    );
+    if (!res.ok) return null;
+
+    const data: unknown = await res.json();
+
+    let rawStream: unknown = null;
+    if (Array.isArray(data)) {
+      const match = data.find(
+        (s) =>
+          s &&
+          typeof s === "object" &&
+          ["latlng", "lat_lng", "latLng", "position"].includes(
+            (s as Record<string, unknown>).type as string
+          )
+      ) as Record<string, unknown> | undefined;
+      rawStream = match?.data ?? null;
+    } else if (data && typeof data === "object") {
+      const obj = data as Record<string, unknown>;
+      rawStream =
+        obj.latlng ?? obj.lat_lng ?? obj.latLng ?? obj.position ?? null;
+      if (
+        rawStream &&
+        typeof rawStream === "object" &&
+        !Array.isArray(rawStream)
+      ) {
+        rawStream = (rawStream as Record<string, unknown>).data ?? null;
+      }
+    }
+
+    const points = normalizeLatLngEntries(rawStream);
+    return points.length >= 2 ? points : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getActivity(id: string): Promise<Activity> {
   const res = await fetch(`${BASE_URL}/activity/${id}`, {
     headers: { Authorization: authHeader() },

@@ -13,6 +13,7 @@ import {
 } from "@/lib/format";
 import type { Activity } from "@/lib/types";
 import StatPill from "./StatPill";
+import RouteThumbnail from "./RouteThumbnail";
 
 export default function ActivityCard({
   activity,
@@ -54,6 +55,8 @@ export default function ActivityCard({
             {relativeDay(activity.start_date_local)}
           </p>
         </div>
+
+        <RouteThumbnail activityId={activity.id} />
 
         <div className="grid grid-cols-2 gap-2">
           <StatPill icon={Clock} label="Durée" value={formatDuration(activity.moving_time)} />

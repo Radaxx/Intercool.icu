@@ -6,7 +6,7 @@ au format Instagram (post carré ou story) pour chaque séance.
 
 ## Stack
 
-- Next.js 14 (App Router) + TypeScript
+- Next.js 15 (App Router) + TypeScript
 - Tailwind CSS + Framer Motion pour l'UI
 - `next/og` (Satori) pour générer les images de partage côté edge
 
@@ -50,6 +50,21 @@ Ouvre [http://localhost:3000](http://localhost:3000).
 - Cliquer sur une séance ouvre un aperçu de l'image de partage, générée par
   `app/api/share/[id]/route.tsx` (format post 1:1 ou story 9:16),
   téléchargeable en PNG.
+- Pour les séances avec GPS, le tracé s'affiche en discret sur la carte
+  (chargé à la demande via `app/api/activities/[id]/gps`, dès qu'elle entre
+  dans le viewport) et en filigrane sur l'image de partage. Les séances sans
+  GPS (home trainer, natation en bassin, renfo...) n'affichent simplement
+  rien à cet endroit.
+
+### Note sur le tracé GPS
+
+Le tracé est reconstruit à partir de l'endpoint `GET /api/v1/activity/{id}/streams?types=latlng`
+d'intervals.icu (projection équirectangulaire simple, pas de fond de carte).
+Le parsing dans `lib/intervals.ts` (`getActivityGps`) accepte plusieurs formes
+de réponse possibles par prudence — si ton compte renvoie un format différent,
+l'itinéraire n'apparaîtra simplement pas (aucune erreur bloquante) : ouvre une
+issue ou dis-le moi avec un exemple de réponse brute de cet endpoint pour
+ajuster le parsing.
 
 ## Confidentialité
 

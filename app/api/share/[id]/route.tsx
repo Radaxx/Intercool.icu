@@ -1,7 +1,8 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
-import { getActivity } from "@/lib/intervals";
+import { getActivity, getActivityGps } from "@/lib/intervals";
 import { getSportMeta } from "@/lib/sports";
+import { routePathFromLatLng } from "@/lib/geo";
 import {
   formatDuration,
   formatElevation,
@@ -43,12 +44,22 @@ export async function GET(
   const dim = DIMENSIONS[format === "story" ? "story" : "post"];
 
   let activity;
+  let gpsPoints: Awaited<ReturnType<typeof getActivityGps>> = null;
   try {
-    activity = await getActivity(id);
+    [activity, gpsPoints] = await Promise.all([
+      getActivity(id),
+      getActivityGps(id),
+    ]);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Erreur inconnue";
     return new Response(message, { status: 502 });
   }
+
+  const routeAreaWidth = dim.width - dim.pad * 2;
+  const routeAreaHeight = dim.height - dim.pad * 2;
+  const routePath = gpsPoints
+    ? routePathFromLatLng(gpsPoints, routeAreaWidth, routeAreaHeight, 0, 260)
+    : null;
 
   const sport = getSportMeta(activity.type);
   const hero = heroStat(activity);
@@ -134,6 +145,25 @@ export async function GET(
             display: "flex",
           }}
         />
+
+        {routePath && (
+          <svg
+            width={routeAreaWidth}
+            height={routeAreaHeight}
+            viewBox={`0 0 ${routeAreaWidth} ${routeAreaHeight}`}
+            style={{ position: "absolute", top: dim.pad, left: dim.pad }}
+          >
+            <path
+              d={routePath}
+              fill="none"
+              stroke="white"
+              strokeOpacity={0.28}
+              strokeWidth={format === "story" ? 10 : 8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        )}
 
         <div
           style={{
