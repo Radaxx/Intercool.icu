@@ -55,35 +55,12 @@ export async function getActivities(days = 90, limit = 60): Promise<Activity[]> 
 
 type RawLatLng = [number, number];
 
-function normalizeLatLngEntries(raw: unknown): RawLatLng[] {
-  if (!Array.isArray(raw)) return [];
-  const out: RawLatLng[] = [];
-  for (const item of raw) {
-    if (
-      Array.isArray(item) &&
-      item.length === 2 &&
-      typeof item[0] === "number" &&
-      typeof item[1] === "number"
-    ) {
-      out.push([item[0], item[1]]);
-    } else if (item && typeof item === "object") {
-      const lat = (item as Record<string, unknown>).lat;
-      const lng =
-        (item as Record<string, unknown>).lng ??
-        (item as Record<string, unknown>).lon;
-      if (typeof lat === "number" && typeof lng === "number") {
-        out.push([lat, lng]);
-      }
-    }
-  }
-  return out;
-}
-
 /**
  * Récupère le tracé GPS (latitude/longitude) d'une activité via l'endpoint
- * streams d'intervals.icu. Les séances sans GPS (home trainer, natation en
- * bassin, renfo...) n'ont pas ce flux : on retourne alors null plutôt que de
- * faire échouer l'appelant.
+ * streams d'intervals.icu. Le flux "latlng" y stocke deux séries parallèles :
+ * `data` = latitude, `data2` = longitude (pas des paires imbriquées).
+ * Les séances sans GPS (home trainer, natation en bassin, renfo...) n'ont
+ * pas ce flux : on retourne alors null plutôt que de faire échouer l'appelant.
  */
 export async function getActivityGps(id: string): Promise<RawLatLng[] | null> {
   try {
@@ -97,111 +74,29 @@ export async function getActivityGps(id: string): Promise<RawLatLng[] | null> {
     if (!res.ok) return null;
 
     const data: unknown = await res.json();
+    if (!Array.isArray(data)) return null;
 
-    let rawStream: unknown = null;
-    if (Array.isArray(data)) {
-      const match = data.find(
-        (s) =>
-          s &&
-          typeof s === "object" &&
-          ["latlng", "lat_lng", "latLng", "position"].includes(
-            (s as Record<string, unknown>).type as string
-          )
-      ) as Record<string, unknown> | undefined;
-      rawStream = match?.data ?? null;
-    } else if (data && typeof data === "object") {
-      const obj = data as Record<string, unknown>;
-      rawStream =
-        obj.latlng ?? obj.lat_lng ?? obj.latLng ?? obj.position ?? null;
-      if (
-        rawStream &&
-        typeof rawStream === "object" &&
-        !Array.isArray(rawStream)
-      ) {
-        rawStream = (rawStream as Record<string, unknown>).data ?? null;
+    const stream = data.find(
+      (s) => s && typeof s === "object" && (s as Record<string, unknown>).type === "latlng"
+    ) as Record<string, unknown> | undefined;
+
+    const lats = stream?.data;
+    const lngs = stream?.data2;
+    if (!Array.isArray(lats) || !Array.isArray(lngs)) return null;
+
+    const points: RawLatLng[] = [];
+    const len = Math.min(lats.length, lngs.length);
+    for (let i = 0; i < len; i++) {
+      const lat = lats[i];
+      const lng = lngs[i];
+      if (typeof lat === "number" && typeof lng === "number") {
+        points.push([lat, lng]);
       }
     }
-
-    const points = normalizeLatLngEntries(rawStream);
     return points.length >= 2 ? points : null;
   } catch {
     return null;
   }
-}
-
-/**
- * Diagnostic temporaire : renvoie la réponse brute d'intervals.icu pour
- * l'activité et pour l'endpoint streams, afin de comprendre pourquoi le
- * tracé GPS ne remonte pas (mauvais endpoint, format inattendu, etc.).
- */
-export async function getActivityDebugInfo(id: string) {
-  const result: Record<string, unknown> = {};
-
-  try {
-    const res = await fetch(`${BASE_URL}/activity/${id}`, {
-      headers: { Authorization: authHeader() },
-    });
-    const text = await res.text();
-    try {
-      const json = JSON.parse(text);
-      result.activity = {
-        status: res.status,
-        ok: res.ok,
-        stream_types: json.stream_types,
-      };
-    } catch {
-      result.activity = {
-        status: res.status,
-        ok: res.ok,
-        bodyPreview: text.slice(0, 500),
-      };
-    }
-  } catch (e) {
-    result.activityError = e instanceof Error ? e.message : String(e);
-  }
-
-  try {
-    // Pas de filtre `types` ici : on veut voir TOUS les flux disponibles
-    // (leurs noms exacts) pour repérer où se cache la longitude.
-    const res = await fetch(`${BASE_URL}/activity/${id}/streams`, {
-      headers: { Authorization: authHeader() },
-    });
-    const text = await res.text();
-
-    let summary: unknown = undefined;
-    try {
-      const json = JSON.parse(text);
-      if (Array.isArray(json)) {
-        summary = json.map((s) => {
-          const entry = s as Record<string, unknown>;
-          const data = entry.data;
-          const data2 = entry.data2;
-          return {
-            type: entry.type,
-            name: entry.name,
-            dataLength: Array.isArray(data) ? data.length : null,
-            sample: Array.isArray(data) ? data.slice(0, 6) : data,
-            data2Length: Array.isArray(data2) ? data2.length : null,
-            data2Sample: Array.isArray(data2) ? data2.slice(0, 6) : data2,
-          };
-        });
-      }
-    } catch {
-      /* body non-JSON, on retombe sur l'aperçu brut ci-dessous */
-    }
-
-    result.streamsAll = {
-      status: res.status,
-      ok: res.ok,
-      bodyLength: text.length,
-      summary,
-      rawPreview: summary === undefined ? text.slice(0, 1000) : undefined,
-    };
-  } catch (e) {
-    result.streamsError = e instanceof Error ? e.message : String(e);
-  }
-
-  return result;
 }
 
 export async function getActivity(id: string): Promise<Activity> {
