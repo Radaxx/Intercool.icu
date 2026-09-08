@@ -18,6 +18,12 @@ type Format = "post" | "story";
 const TITLE_MAX = 60;
 const DESCRIPTION_MAX = 90;
 
+const TEMPLATE_OPTIONS = [
+  { id: "classic", label: "Classique" },
+  { id: "editorial", label: "Éditorial" },
+  { id: "poster", label: "Poster" },
+];
+
 export default function ShareModal({
   activity,
   onClose,
@@ -26,6 +32,7 @@ export default function ShareModal({
   onClose: () => void;
 }) {
   const [format, setFormat] = useState<Format>("post");
+  const [template, setTemplate] = useState("classic");
   const [title, setTitle] = useState(activity.name || "");
   const [description, setDescription] = useState("");
   const [draft, setDraft] = useState({ title: activity.name || "", description: "" });
@@ -62,7 +69,7 @@ export default function ShareModal({
     return () => clearTimeout(t);
   }, [draft]);
 
-  const params = new URLSearchParams({ format });
+  const params = new URLSearchParams({ format, template });
   if (title.trim()) params.set("title", title.trim());
   if (description.trim()) params.set("description", description.trim());
   const src = `/api/share/${activity.id}?${params.toString()}`;
@@ -172,6 +179,25 @@ export default function ShareModal({
                 className="resize-none rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-neutral-100 outline-none focus:border-indigo-400/60"
               />
             </label>
+          </div>
+
+          <div className="flex gap-2">
+            {TEMPLATE_OPTIONS.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => {
+                  setImageLoaded(false);
+                  setTemplate(t.id);
+                }}
+                className={`flex-1 rounded-xl px-3 py-2 text-sm font-medium transition ${
+                  template === t.id
+                    ? "bg-white text-black"
+                    : "bg-white/10 text-neutral-300 hover:bg-white/15"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
 
           <div

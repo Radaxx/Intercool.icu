@@ -24,3 +24,14 @@ export async function loadGoogleFont(
   const res = await fetch(match[1]);
   return res.arrayBuffer();
 }
+
+/**
+ * Certains styles (ex: text-transform: uppercase) affichent une casse
+ * différente de celle des chaînes source. Le sous-ensemble de glyphes
+ * envoyé à Google Fonts doit couvrir la casse RÉELLEMENT dessinée, sinon
+ * les lettres manquantes retombent sur une police de secours (rendu
+ * incohérent). On inclut donc systématiquement la variante majuscule.
+ */
+export function withCaseVariants(text: string): string {
+  return `${text} ${text.toUpperCase()}`;
+}

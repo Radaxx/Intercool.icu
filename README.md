@@ -48,10 +48,11 @@ Ouvre [http://localhost:3000](http://localhost:3000).
 - Le dashboard permet de filtrer par sport et par période, avec des cartes
   animées affichant distance, durée, dénivelé, FC moyenne, allure/vitesse.
 - Cliquer sur une séance ouvre une modale de partage : titre et description
-  éditables (régénèrent l'image après une courte pause de frappe), aperçu au
-  format post 1:1 ou story 9:16 généré par `app/api/share/[id]/route.tsx`,
-  téléchargeable en PNG ou partageable directement via le menu système du
-  téléphone (Web Share API — voir plus bas).
+  éditables (régénèrent l'image après une courte pause de frappe), choix
+  entre 3 styles visuels (voir plus bas), aperçu au format post 1:1 ou story
+  9:16 généré par `app/api/share/[id]/route.tsx`, téléchargeable en PNG ou
+  partageable directement via le menu système du téléphone (Web Share API —
+  voir plus bas).
 - Pour les séances avec GPS, le tracé s'affiche en discret sur la carte
   (chargé à la demande via `app/api/activities/[id]/gps`, dès qu'elle entre
   dans le viewport) et dans un panneau dédié (ligne blanche avec effet glow +
@@ -70,6 +71,26 @@ séries parallèles, `data` (latitude) et `data2` (longitude), zippées dans
 `getActivityGps` (`lib/intervals.ts`). Le tracé est ensuite projeté
 (équirectangulaire simple, pas de fond de carte) par `routePathFromLatLng`
 (`lib/geo.ts`).
+
+## Styles d'image de partage
+
+Trois templates au choix (bouton `?template=` sur `/api/share/[id]`),
+définis dans `lib/share-templates.tsx` :
+
+- **Classique** — dégradé coloré selon le sport, panneau de tracé GPS avec
+  effet glow, cartes de stats en verre dépoli.
+- **Éditorial** — fond noir uni, typographie serif (Fraunces), lignes
+  fines, look magazine calme et premium.
+- **Poster** — blocs de couleur plats à fort contraste, typographie géante
+  (Archivo Black), angles nets façon affiche/ticket de concert.
+
+Chaque template déclare les polices Google Fonts dont il a besoin
+(`TemplateDef.fonts`) ; `app/api/share/[id]/route.tsx` ne charge que celles
+du template demandé. Le sous-ensemble de glyphes envoyé à Google Fonts
+inclut systématiquement la variante majuscule du texte
+(`withCaseVariants` dans `lib/og-font.ts`), car plusieurs libellés utilisent
+`text-transform: uppercase` — sans ça, les lettres manquantes retombent sur
+une police de secours et le rendu devient incohérent.
 
 ## Partage direct vers Instagram (Web Share API)
 
