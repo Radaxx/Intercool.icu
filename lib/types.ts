@@ -2,6 +2,7 @@ export interface Activity {
   id: string;
   name: string;
   type: string;
+  description?: string | null;
   start_date_local: string;
   moving_time: number | null;
   elapsed_time: number | null;

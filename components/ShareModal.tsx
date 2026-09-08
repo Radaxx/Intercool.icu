@@ -22,6 +22,7 @@ const TEMPLATE_OPTIONS = [
   { id: "classic", label: "Classique" },
   { id: "editorial", label: "Éditorial" },
   { id: "poster", label: "Poster" },
+  { id: "map", label: "Carte" },
 ];
 
 export default function ShareModal({
@@ -181,7 +182,7 @@ export default function ShareModal({
             </label>
           </div>
 
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {TEMPLATE_OPTIONS.map((t) => (
               <button
                 key={t.id}
@@ -189,7 +190,7 @@ export default function ShareModal({
                   setImageLoaded(false);
                   setTemplate(t.id);
                 }}
-                className={`flex-1 rounded-xl px-3 py-2 text-sm font-medium transition ${
+                className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
                   template === t.id
                     ? "bg-white text-black"
                     : "bg-white/10 text-neutral-300 hover:bg-white/15"

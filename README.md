@@ -74,7 +74,7 @@ séries parallèles, `data` (latitude) et `data2` (longitude), zippées dans
 
 ## Styles d'image de partage
 
-Trois templates au choix (bouton `?template=` sur `/api/share/[id]`),
+Quatre templates au choix (bouton `?template=` sur `/api/share/[id]`),
 définis dans `lib/share-templates.tsx` :
 
 - **Classique** — dégradé coloré selon le sport, panneau de tracé GPS avec
@@ -83,6 +83,8 @@ définis dans `lib/share-templates.tsx` :
   fines, look magazine calme et premium.
 - **Poster** — blocs de couleur plats à fort contraste, typographie géante
   (Archivo Black), angles nets façon affiche/ticket de concert.
+- **Carte** — fond de carte plein cadre (voir ci-dessous), tracé et stats
+  en surimpression façon Strava/Komoot.
 
 Chaque template déclare les polices Google Fonts dont il a besoin
 (`TemplateDef.fonts`) ; `app/api/share/[id]/route.tsx` ne charge que celles
@@ -91,6 +93,38 @@ inclut systématiquement la variante majuscule du texte
 (`withCaseVariants` dans `lib/og-font.ts`), car plusieurs libellés utilisent
 `text-transform: uppercase` — sans ça, les lettres manquantes retombent sur
 une police de secours et le rendu devient incohérent.
+
+Un template peut déclarer un `prepare()` asynchrone (ex: aller chercher des
+tuiles de carte) exécuté avant le rendu ; son résultat est fusionné dans les
+données passées au template (voir `PrepareContext`/`TemplateDef` dans
+`lib/share-templates.tsx`).
+
+### Fond de carte (template "Carte")
+
+- **Activités réelles (GPS extérieur)** : vraies tuiles [OpenStreetMap](https://www.openstreetmap.org/copyright)
+  via le style sombre gratuit de [CARTO](https://carto.com/basemaps) —
+  `lib/tiles.ts` (`fetchTileDataUri`). La projection Web Mercator et le
+  calcul de la fenêtre de tuiles (façon "fit bounds" des libs de cartes)
+  sont dans `lib/mercator.ts` ; le tracé est reprojeté dans le MÊME repère
+  pixel que les tuiles pour rester aligné. L'attribution
+  "© OpenStreetMap contributors © CARTO" (requise par la licence ODbL)
+  s'affiche sur l'image. Le zoom est choisi pour que le tracé tienne dans
+  une zone "sûre" qui évite le texte (titre en haut, stats en bas) — les
+  tuiles, elles, couvrent tout le cadre.
+- **Activités virtuelles (Zwift...)** : pas de vraies tuiles. Le fond
+  d'écran de Strava pour Zwift vient d'un partenariat privé entre Zwift et
+  Strava (accès à des tuiles internes, pas une API publique) — il n'existe
+  pas d'équivalent public/légal qu'on puisse appeler ici. On affiche donc un
+  fond stylisé (dégradé sombre) avec le nom du monde si on le détecte dans
+  le nom/la description de la séance (`lib/virtual-world.ts`,
+  `detectVirtualWorld` — liste de mondes Zwift connus, ex. "Watopia"), et
+  le tracé (la position dans le monde du jeu, réelle mais pas géographique)
+  s'affiche quand même par-dessus.
+- **Aucune donnée GPS** : repli simple (dégradé, sans carte).
+
+Pour un usage à plus grand volume qu'un outil personnel, les tuiles CARTO
+gratuites ne sont pas prévues pour un produit public à fort trafic —
+remplacer par un fournisseur payant (Mapbox, MapTiler, Stadia Maps...).
 
 ## Partage direct vers Instagram (Web Share API)
 

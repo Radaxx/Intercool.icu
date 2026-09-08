@@ -12,6 +12,7 @@ import {
 } from "@/lib/format";
 import { loadGoogleFont, withCaseVariants } from "@/lib/og-font";
 import { TEMPLATES, DEFAULT_TEMPLATE_ID, type ShareFormat } from "@/lib/share-templates";
+import { isVirtualType, detectVirtualWorld } from "@/lib/virtual-world";
 
 export const runtime = "edge";
 
@@ -58,6 +59,10 @@ export async function GET(
   }
 
   const contentWidth = dim.width - dim.pad * 2;
+  const isVirtual = isVirtualType(activity.type);
+  const virtualWorldLabel = isVirtual
+    ? detectVirtualWorld(activity.name, activity.description)
+    : null;
 
   const sport = getSportMeta(activity.type);
   const hero = heroStat(activity);
@@ -101,14 +106,26 @@ export async function GET(
   ].join(" ");
   const subsetText = withCaseVariants(allText);
 
-  const fonts = await Promise.all(
-    template.fonts.map(async (f) => ({
-      name: f.family,
-      weight: f.weight as 400 | 500 | 600 | 700 | 800,
-      style: "normal" as const,
-      data: await loadGoogleFont(f.family, f.weight as 400 | 500 | 600 | 700 | 800, subsetText),
-    }))
-  );
+  const [fonts, extra] = await Promise.all([
+    Promise.all(
+      template.fonts.map(async (f) => ({
+        name: f.family,
+        weight: f.weight as 400 | 500 | 600 | 700 | 800,
+        style: "normal" as const,
+        data: await loadGoogleFont(f.family, f.weight as 400 | 500 | 600 | 700 | 800, subsetText),
+      }))
+    ),
+    template.prepare
+      ? template.prepare({
+          gpsPoints,
+          isVirtual,
+          virtualWorldLabel,
+          contentWidth,
+          dim,
+          format,
+        })
+      : Promise.resolve({}),
+  ]);
 
   return new ImageResponse(
     template.render({
@@ -122,6 +139,7 @@ export async function GET(
       hero,
       stats: visibleStats,
       gpsPoints,
+      ...extra,
     }),
     { width: dim.width, height: dim.height, fonts }
   );
