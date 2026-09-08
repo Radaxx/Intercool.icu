@@ -101,16 +101,27 @@ données passées au template (voir `PrepareContext`/`TemplateDef` dans
 
 ### Fond de carte (template "Carte")
 
-- **Activités réelles (GPS extérieur)** : vraies tuiles [OpenStreetMap](https://www.openstreetmap.org/copyright)
-  via le style sombre gratuit de [CARTO](https://carto.com/basemaps) —
-  `lib/tiles.ts` (`fetchTileDataUri`). La projection Web Mercator et le
-  calcul de la fenêtre de tuiles (façon "fit bounds" des libs de cartes)
-  sont dans `lib/mercator.ts` ; le tracé est reprojeté dans le MÊME repère
-  pixel que les tuiles pour rester aligné. L'attribution
-  "© OpenStreetMap contributors © CARTO" (requise par la licence ODbL)
-  s'affiche sur l'image. Le zoom est choisi pour que le tracé tienne dans
-  une zone "sûre" qui évite le texte (titre en haut, stats en bas) — les
-  tuiles, elles, couvrent tout le cadre.
+- **Activités réelles (GPS extérieur)** : vraies tuiles du serveur officiel
+  [OpenStreetMap](https://www.openstreetmap.org/copyright) (gratuit, sans
+  clé API) — `lib/tiles.ts` (`fetchTileDataUri`). On a d'abord essayé le
+  style sombre gratuit de CARTO, plus adapté visuellement à une image
+  sombre, mais CARTO exige désormais une clé API même sur son offre
+  gratuite (elle renvoie une image "API KEY REQUIRED" à la place de la
+  tuile) ; on est donc passé au rendu OSM standard (clair, avec libellés),
+  compensé par des dégradés de lisibilité plus marqués et un tracé avec
+  contour sombre pour rester lisible quelle que soit la couleur du fond.
+  La projection Web Mercator et le calcul de la fenêtre de tuiles (façon
+  "fit bounds" des libs de cartes) sont dans `lib/mercator.ts` ; le tracé
+  est reprojeté dans le MÊME repère pixel que les tuiles pour rester
+  aligné. L'attribution "© OpenStreetMap contributors" (requise par la
+  licence ODbL) s'affiche sur l'image. Le zoom est choisi pour que le
+  tracé tienne dans une zone "sûre" qui évite le texte (titre en haut,
+  stats en bas) — les tuiles, elles, couvrent tout le cadre.
+  Usage raisonnable uniquement (`tile.openstreetmap.org` n'est pas prévu
+  pour un usage important, voir leur
+  [politique d'usage](https://operations.osmfoundation.org/policies/tiles/)) ;
+  pour plus de volume, passer par un fournisseur de tuiles dédié (Mapbox,
+  MapTiler, Stadia Maps, ou CARTO avec une clé API).
 - **Activités virtuelles (Zwift...)** : pas de vraies tuiles. Le fond
   d'écran de Strava pour Zwift vient d'un partenariat privé entre Zwift et
   Strava (accès à des tuiles internes, pas une API publique) — il n'existe
@@ -121,10 +132,6 @@ données passées au template (voir `PrepareContext`/`TemplateDef` dans
   le tracé (la position dans le monde du jeu, réelle mais pas géographique)
   s'affiche quand même par-dessus.
 - **Aucune donnée GPS** : repli simple (dégradé, sans carte).
-
-Pour un usage à plus grand volume qu'un outil personnel, les tuiles CARTO
-gratuites ne sont pas prévues pour un produit public à fort trafic —
-remplacer par un fournisseur payant (Mapbox, MapTiler, Stadia Maps...).
 
 ## Partage direct vers Instagram (Web Share API)
 

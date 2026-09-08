@@ -1,19 +1,24 @@
 /**
- * Tuiles de fond de carte, basées sur les données OpenStreetMap (licence
- * ODbL). On utilise le style sombre de CARTO plutôt que le rendu OSM par
- * défaut : visuellement adapté à une image de partage sombre, et sans les
- * libellés (rues, villes) qui entreraient en concurrence avec nos propres
- * stats à l'écran.
+ * Tuiles de fond de carte : serveur de tuiles officiel OpenStreetMap
+ * (licence des données : ODbL), gratuit et sans clé API.
  *
- * Attribution requise (affichée sur l'image) : © OpenStreetMap contributors © CARTO
+ * On a d'abord utilisé le style sombre gratuit de CARTO, plus adapté
+ * visuellement à une image de partage sombre, mais CARTO exige désormais une
+ * clé API même sur son offre gratuite — on utilise donc le rendu OSM
+ * standard (clair, avec libellés), et on compense par des dégradés de
+ * lisibilité plus marqués + un tracé avec contour sombre dans le template.
  *
- * Pour un usage à plus grand volume qu'un outil personnel, remplacer par un
- * fournisseur de tuiles payant (Mapbox, MapTiler, Stadia Maps...) : les
- * tuiles CARTO gratuites ne sont pas prévues pour un produit public à fort
- * trafic.
+ * Attribution requise (affichée sur l'image) : © OpenStreetMap contributors
+ *
+ * Usage raisonnable uniquement (User-Agent explicite, pas de requêtes en
+ * boucle) : le serveur tile.openstreetmap.org n'est pas prévu pour un usage
+ * important — voir https://operations.osmfoundation.org/policies/tiles/.
+ * Pour un usage à plus grand volume qu'un outil personnel, passer par un
+ * fournisseur de tuiles dédié (Mapbox, MapTiler, Stadia Maps, ou CARTO avec
+ * une clé API).
  */
 const TILE_URL = (z: number, x: number, y: number) =>
-  `https://basemaps.cartocdn.com/dark_nolabels/${z}/${x}/${y}.png`;
+  `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
 
 const USER_AGENT = "intercool.icu (personal training dashboard)";
 
@@ -37,6 +42,11 @@ export async function fetchTileDataUri(
       headers: { "User-Agent": USER_AGENT },
     });
     if (!res.ok) return null;
+    // Un fournisseur peut répondre 200 avec une image d'erreur ("clé API
+    // requise", quota dépassé...) au lieu d'un vrai statut d'échec : on
+    // vérifie le type de contenu pour éviter d'afficher ce genre de tuile.
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!contentType.startsWith("image/")) return null;
     const buf = await res.arrayBuffer();
     return `data:image/png;base64,${arrayBufferToBase64(buf)}`;
   } catch {
@@ -44,4 +54,4 @@ export async function fetchTileDataUri(
   }
 }
 
-export const TILE_ATTRIBUTION = "© OpenStreetMap contributors © CARTO";
+export const TILE_ATTRIBUTION = "© OpenStreetMap contributors";

@@ -1073,7 +1073,7 @@ function renderMap(data: TemplateData): ReactElement {
           width: dim.width,
           height: Math.round(dim.height * 0.4),
           display: "flex",
-          background: "linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%)",
+          background: "linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%)",
         }}
       />
       <div
@@ -1084,7 +1084,7 @@ function renderMap(data: TemplateData): ReactElement {
           width: dim.width,
           height: Math.round(dim.height * 0.45),
           display: "flex",
-          background: "linear-gradient(0deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%)",
+          background: "linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%)",
         }}
       />
 
@@ -1095,12 +1095,22 @@ function renderMap(data: TemplateData): ReactElement {
           viewBox={`0 0 ${dim.width} ${dim.height}`}
           style={{ position: "absolute", top: 0, left: 0 }}
         >
+          {/* Contour sombre : garde le tracé lisible quelle que soit la
+              couleur du fond de carte en dessous (rues, eau, verdure...). */}
+          <path
+            d={mapLayer.routePath}
+            fill="none"
+            stroke="rgba(0,0,0,0.55)"
+            strokeWidth={format === "story" ? 13 : 11}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
           <path
             d={mapLayer.routePath}
             fill="none"
             stroke="white"
-            strokeOpacity={0.92}
-            strokeWidth={format === "story" ? 9 : 7}
+            strokeOpacity={0.95}
+            strokeWidth={format === "story" ? 8 : 6}
             strokeLinecap="round"
             strokeLinejoin="round"
           />
